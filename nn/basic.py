@@ -270,7 +270,7 @@ class EmbeddingLayer(object):
 
         self.n_V = len(self.vocab_map)
         self.n_d = n_d
-
+	
     def map_to_words(self, ids):
         n_V, lst_words = self.n_V, self.lst_words
         return [ lst_words[i] if i < n_V else "<err>" for i in ids ]
