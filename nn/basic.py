@@ -274,7 +274,7 @@ class EmbeddingLayer(object):
     def map_to_words(self, ids):
         n_V, lst_words = self.n_V, self.lst_words
         return [ lst_words[i] if i < n_V else "<err>" for i in ids ]
-
+    
     def map_to_ids(self, words, filter_oov=False):
         '''
             map the list of string tokens into a numpy array of integer IDs

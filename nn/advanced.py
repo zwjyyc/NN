@@ -246,6 +246,61 @@ class AttentionLayer(Layer):
             p.set_value(q.get_value())
 
 
+class QueryAttentionLayer(Layer):
+    def __init__(self, n_q, n_d):
+	self.n_q = n_q
+	self.n_d = n_d
+	self.create_parameters()
+	self.n_in = n_q
+	self.n_out = n_d
+
+    def create_parameters(self):
+	n_q = self.n_q
+	n_d = self.n_d
+	self.W = create_shared(random_init((n_q, n_d)), name = "W")
+	self.b = create_shared(random_init((n_d,)), name = "b")
+     	self.lst_params = [ self.W, self.b] 
+     
+    def forward(self, q_vec, h_vec, xs, mask = None):
+	W = self.W
+	b = self.b	
+
+	q_vec_tmp = T.tanh(T.dot(q_vec, W) + b)
+	alpha =  T.sum(xs * q_vec_tmp, axis = 2)
+	alpha = T.nnet.softmax(alpha.dimshuffle(1, 0))
+
+        if mask is not None:
+            eps = 1e-8
+            if mask.dtype != theano.config.floatX:
+                mask = T.cast(mask, theano.config.floatX)
+            alpha = alpha * mask.dimshuffle((1, 0))
+            alpha = alpha / (T.sum(alpha, axis=1) + eps).dimshuffle(0, 'x')
+	
+	q_vec_tmp = T.dot(alpha.dimshuffle(1, 0, 'x'), q_vec_tmp.dimshuffle('x', 0))
+	outputs = q_vec_tmp * xs
+
+	return outputs
+
+    def forward_all(self, x, q_vecs, masks = None):
+	h0 = T.zeros((x.shape[0], x.shape[1], x.shape[2]), dtype=theano.config.floatX)
+	h, _ = theano.scan(
+		fn = self.forward,
+		sequences = q_vecs,
+		outputs_info = h0,
+		non_sequences = [x, masks]
+		)
+	return h
+
+    @property
+    def params(self):
+        return self.lst_params
+
+    @params.setter
+    def params(self, param_list):
+        assert len(param_list) == len(self.lst_params)
+        for p, q in zip(self.lst_params, param_list):
+            p.set_value(q.get_value())
+
 '''
     This class implements the attention layer described in
         A Neural Attention Model for Abstractive Sentence Summarization
